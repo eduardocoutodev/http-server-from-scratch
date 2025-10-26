@@ -84,10 +84,6 @@ fun handleIncomingRequestAndReturnIfSocketShouldBeAlive(clientSocket: Socket): B
         response = httpResponse
     )
 
-    if(shouldCloseSocket){
-        clientSocket.close()
-    }
-
     println("Responded to client")
     return !shouldCloseSocket
 }

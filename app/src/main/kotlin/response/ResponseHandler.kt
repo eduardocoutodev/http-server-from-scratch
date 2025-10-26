@@ -4,6 +4,7 @@ import CRLF
 import HTTP_VERSION
 import domain.HTTPResponse
 import domain.HTTPRequest
+import request.shouldCloseSocketConnection
 import java.io.IOException
 import java.net.SocketException
 
@@ -17,7 +18,7 @@ import kotlin.text.toByteArray
 fun respondHttpRequest(
     clientSocket: Socket,
     request: HTTPRequest,
-    response: HTTPResponse
+    response: HTTPResponse,
 ) {
     if (clientSocket.isClosed) {
         println("Not responding to closed socket connection")
@@ -43,6 +44,10 @@ fun respondHttpRequest(
         }
 
         outputStream.flush()
+
+        if (shouldCloseSocketConnection(request = request)) {
+            clientSocket.close()
+        }
     } catch (e: SocketException) {
         println("Client disconnected: ${e.message}")
     } catch (e: IOException) {
@@ -62,6 +67,7 @@ private fun prepareResponse(
     )
 
     val headers = buildResponseHeaders(
+        request = request,
         response = response,
         bodyLength = compressionResult?.body?.size ?: 0,
         additionalHeaders = compressionResult?.headers
@@ -72,6 +78,7 @@ private fun prepareResponse(
 
 @OptIn(ExperimentalStdlibApi::class)
 fun buildResponseHeaders(
+    request: HTTPRequest,
     response: HTTPResponse,
     bodyLength: Int,
     additionalHeaders: Map<String, String>?
@@ -81,19 +88,18 @@ fun buildResponseHeaders(
             put("Content-Type", it)
         }
 
-        if (bodyLength > 0 || response.body != null) {
-            put("Content-Length", bodyLength.toString())
-        }
+        put("Content-Length", bodyLength.toString())
 
         response.headers.let {
             putAll(it)
         }
 
+        if (shouldCloseSocketConnection(request)) {
+            put("Connection", "close")
+        }
+
         additionalHeaders?.let {
             putAll(it)
         }
-
-        // Default headers
-        putIfAbsent("Connection", "close")
     }
 }
