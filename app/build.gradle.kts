@@ -1,6 +1,5 @@
 plugins {
     id("org.jetbrains.kotlin.jvm") version "2.1.0"
-
     application
 }
 
@@ -33,4 +32,12 @@ kotlin {
 
 application {
     mainClass.set("AppKt")
+}
+
+tasks.jar {
+    manifest {
+        attributes["Main-Class"] = "AppKt"
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
 }
