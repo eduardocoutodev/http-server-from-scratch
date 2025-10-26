@@ -1,0 +1,117 @@
+package route
+
+import kotlin.to
+import ServerContext
+import domain.*
+import java.io.File
+import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.Path
+import kotlin.io.path.createFile
+import kotlin.io.path.exists
+
+typealias HTTPResponseCallback = (request: HTTPRequest) -> HTTPResponse
+
+val ROUTE_HANDLERS: Map<Route, HTTPResponseCallback> = mapOf(
+    Route(path = "/", method = HttpMethod.GET) to ::rootRouteHandler,
+    Route(path = "/echo/{str}", method = HttpMethod.GET) to ::echoRouteHandler,
+    Route(path = "/user-agent", method = HttpMethod.GET) to ::echoUserAgent,
+    Route(path = "/files/{filename}", method = HttpMethod.GET) to ::retrieveFile,
+    Route(path= "/files/{filename}", method = HttpMethod.POST) to ::publishFile,
+)
+
+fun rootRouteHandler(req: HTTPRequest): HTTPResponse =
+    HTTPResponse(status = HTTPStatus.OK())
+
+fun echoRouteHandler(req: HTTPRequest): HTTPResponse {
+    val strArg = req.routeArguments["str"]
+
+    if (strArg.isNullOrBlank()) {
+        return HTTPResponse(
+            status = HTTPStatus.BAD_REQUEST()
+        )
+    }
+
+    return HTTPResponse(
+        status = HTTPStatus.OK(),
+        contentType = "text/plain",
+        body = strArg
+    )
+}
+
+fun echoUserAgent(req: HTTPRequest): HTTPResponse {
+    val userAgent = req.headers["user-agent"]
+
+    if (userAgent.isNullOrBlank()) {
+        return HTTPResponse(
+            status = HTTPStatus.BAD_REQUEST()
+        )
+    }
+
+    return HTTPResponse(
+        status = HTTPStatus.OK(),
+        contentType = "text/plain",
+        body = userAgent
+    )
+}
+
+@OptIn(ExperimentalPathApi::class)
+fun retrieveFile(req: HTTPRequest): HTTPResponse {
+    val fileName = req.routeArguments["filename"]
+
+    if (fileName.isNullOrBlank()) {
+        return HTTPResponse(
+            status = HTTPStatus.BAD_REQUEST()
+        )
+    }
+
+    val directory = ServerContext.filesDirectory
+    val filenamePath = Path(directory.toString(), fileName)
+    if (!filenamePath.exists()) {
+        return HTTPResponse(
+            status = HTTPStatus.NOT_FOUND()
+        )
+    }
+
+    val fileContent = File(filenamePath.toUri()).readText()
+
+    return HTTPResponse(
+        status = HTTPStatus.OK(),
+        contentType = "application/octet-stream",
+        body = fileContent
+    )
+}
+
+@OptIn(ExperimentalPathApi::class)
+fun publishFile(req: HTTPRequest): HTTPResponse {
+    val fileName = req.routeArguments["filename"]
+
+    if (fileName.isNullOrBlank()) {
+        println("Filename is null or blank, bad request !")
+        return HTTPResponse(
+            status = HTTPStatus.BAD_REQUEST()
+        )
+    }
+
+    if(req.body.isNullOrBlank()){
+        println("Body is null or blank, bad request !")
+        return HTTPResponse(
+            status = HTTPStatus.BAD_REQUEST()
+        )
+    }
+
+    val directory = ServerContext.filesDirectory
+    val filenamePath = Path(directory.toString(), fileName)
+    if (filenamePath.exists()) {
+        println("File already exists ! Bad Request")
+        return HTTPResponse(
+            status = HTTPStatus.BAD_REQUEST()
+        )
+    }
+
+    filenamePath.createFile()
+    File(filenamePath.toUri()).appendText(req.body)
+
+    return HTTPResponse(
+        status = HTTPStatus.CREATED(),
+    )
+}
