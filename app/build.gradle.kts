@@ -1,5 +1,6 @@
 plugins {
     id("org.jetbrains.kotlin.jvm") version "2.1.0"
+    id("org.jlleitschuh.gradle.ktlint") version "12.1.0"
     application
 }
 
@@ -19,6 +20,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation("com.squareup.okhttp3:okhttp:4.12.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

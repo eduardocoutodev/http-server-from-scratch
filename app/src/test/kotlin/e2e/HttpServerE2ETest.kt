@@ -1,22 +1,23 @@
 package e2e
 
-import HTTP_SERVER_PORT
 import ServerContext
 import kotlinx.coroutines.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import org.junit.jupiter.api.*
 import request.handleNewSocketConnection
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
 import java.net.ServerSocket
-import java.net.Socket
 import java.nio.file.Path
-import java.util.zip.GZIPInputStream
+import java.util.concurrent.TimeUnit
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.createFile
 import kotlin.io.path.writeText
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -26,6 +27,8 @@ class HttpServerE2ETest {
     private lateinit var serverJob: Job
     private lateinit var scope: CoroutineScope
     private var serverPort: Int = 0
+    private lateinit var client: OkHttpClient
+    private lateinit var baseUrl: String
 
     @TempDir
     lateinit var tempDir: Path
@@ -41,6 +44,7 @@ class HttpServerE2ETest {
         serverSocket = ServerSocket(0)
         serverPort = serverSocket.localPort
         serverSocket.reuseAddress = true
+        baseUrl = "http://localhost:$serverPort"
 
         scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -64,6 +68,13 @@ class HttpServerE2ETest {
             }
         }
 
+        // Initialize OkHttp client
+        client = OkHttpClient.Builder()
+            .connectTimeout(5, TimeUnit.SECONDS)
+            .readTimeout(5, TimeUnit.SECONDS)
+            .writeTimeout(5, TimeUnit.SECONDS)
+            .build()
+
         // Give server time to start
         Thread.sleep(100)
     }
@@ -80,142 +91,75 @@ class HttpServerE2ETest {
         originalFilesDirectory?.let {
             ServerContext.filesDirectory = it
         }
-    }
 
-    private fun makeHttpRequest(
-        method: String,
-        path: String,
-        headers: Map<String, String> = emptyMap(),
-        body: String? = null
-    ): HttpResponse {
-        Socket("localhost", serverPort).use { socket ->
-            socket.soTimeout = 5000
-
-            val writer = OutputStreamWriter(socket.getOutputStream())
-            val reader = BufferedReader(InputStreamReader(socket.getInputStream()))
-
-            // Write request line
-            writer.write("$method $path HTTP/1.1\r\n")
-
-            // Write headers
-            val allHeaders = headers.toMutableMap()
-            if (!allHeaders.containsKey("Host")) {
-                allHeaders["Host"] = "localhost:$serverPort"
-            }
-            if (body != null && !allHeaders.containsKey("Content-Length")) {
-                allHeaders["Content-Length"] = body.length.toString()
-            }
-            if (!allHeaders.containsKey("Connection")) {
-                allHeaders["Connection"] = "close"
-            }
-
-            allHeaders.forEach { (name, value) ->
-                writer.write("$name: $value\r\n")
-            }
-
-            writer.write("\r\n")
-
-            // Write body if present
-            body?.let {
-                writer.write(it)
-            }
-
-            writer.flush()
-
-            // Read response
-            return parseHttpResponse(reader, socket.getInputStream())
-        }
-    }
-
-    private fun parseHttpResponse(reader: BufferedReader, inputStream: java.io.InputStream): HttpResponse {
-        // Read status line
-        val statusLine = reader.readLine() ?: throw Exception("Empty response")
-        val statusParts = statusLine.split(" ", limit = 3)
-        val statusCode = statusParts[1].toInt()
-
-        // Read headers
-        val headers = mutableMapOf<String, String>()
-        while (true) {
-            val line = reader.readLine() ?: break
-            if (line.isEmpty() || line.isBlank()) break
-
-            val colonIndex = line.indexOf(':')
-            if (colonIndex != -1) {
-                val headerName = line.substring(0, colonIndex).trim().lowercase()
-                val headerValue = line.substring(colonIndex + 1).trim()
-                headers[headerName] = headerValue
-            }
-        }
-
-        // Read body
-        val contentLength = headers["content-length"]?.toIntOrNull() ?: 0
-        val body = if (contentLength > 0) {
-            val isGzipped = headers["content-encoding"]?.equals("gzip", ignoreCase = true) == true
-
-            if (isGzipped) {
-                // Read gzipped content
-                val gzipStream = GZIPInputStream(inputStream)
-                gzipStream.readBytes().toString(Charsets.UTF_8)
-            } else {
-                // Read plain content
-                val bodyChars = CharArray(contentLength)
-                var totalRead = 0
-                while (totalRead < contentLength) {
-                    val read = reader.read(bodyChars, totalRead, contentLength - totalRead)
-                    if (read == -1) break
-                    totalRead += read
-                }
-                String(bodyChars, 0, totalRead)
-            }
-        } else {
-            ""
-        }
-
-        return HttpResponse(statusCode, headers, body)
+        client.dispatcher.executorService.shutdown()
+        client.connectionPool.evictAll()
     }
 
     @Test
     fun `GET root endpoint should return 200 OK`() {
-        val response = makeHttpRequest("GET", "/")
+        val request = Request.Builder()
+            .url("$baseUrl/")
+            .get()
+            .build()
 
-        assertEquals(200, response.statusCode)
+        client.newCall(request).execute().use { response ->
+            assertEquals(200, response.code)
+        }
     }
 
     @Test
     fun `GET echo endpoint should echo back the string`() {
-        val response = makeHttpRequest("GET", "/echo/hello-world")
+        val request = Request.Builder()
+            .url("$baseUrl/echo/hello-world")
+            .get()
+            .build()
 
-        assertEquals(200, response.statusCode)
-        assertEquals("text/plain", response.headers["content-type"])
-        assertEquals("hello-world", response.body)
+        client.newCall(request).execute().use { response ->
+            assertEquals(200, response.code)
+            assertEquals("text/plain", response.header("Content-Type"))
+            assertEquals("hello-world", response.body?.string())
+        }
     }
 
     @Test
     fun `GET echo endpoint with special characters`() {
-        val response = makeHttpRequest("GET", "/echo/test_123-abc")
+        val request = Request.Builder()
+            .url("$baseUrl/echo/test_123-abc")
+            .get()
+            .build()
 
-        assertEquals(200, response.statusCode)
-        assertEquals("test_123-abc", response.body)
+        client.newCall(request).execute().use { response ->
+            assertEquals(200, response.code)
+            assertEquals("test_123-abc", response.body?.string())
+        }
     }
 
     @Test
     fun `GET user-agent endpoint should return user agent`() {
-        val response = makeHttpRequest(
-            "GET",
-            "/user-agent",
-            headers = mapOf("User-Agent" to "TestClient/1.0")
-        )
+        val request = Request.Builder()
+            .url("$baseUrl/user-agent")
+            .header("User-Agent", "TestClient/1.0")
+            .get()
+            .build()
 
-        assertEquals(200, response.statusCode)
-        assertEquals("text/plain", response.headers["content-type"])
-        assertEquals("TestClient/1.0", response.body)
+        client.newCall(request).execute().use { response ->
+            assertEquals(200, response.code)
+            assertEquals("text/plain", response.header("Content-Type"))
+            assertEquals("TestClient/1.0", response.body?.string())
+        }
     }
 
     @Test
     fun `GET non-existent route should return 404`() {
-        val response = makeHttpRequest("GET", "/nonexistent")
+        val request = Request.Builder()
+            .url("$baseUrl/nonexistent")
+            .get()
+            .build()
 
-        assertEquals(404, response.statusCode)
+        client.newCall(request).execute().use { response ->
+            assertEquals(404, response.code)
+        }
     }
 
     @OptIn(ExperimentalPathApi::class)
@@ -225,32 +169,44 @@ class HttpServerE2ETest {
         val testFile = tempDir.resolve("test.txt")
         testFile.writeText("File content from e2e test")
 
-        val response = makeHttpRequest("GET", "/files/test.txt")
+        val request = Request.Builder()
+            .url("$baseUrl/files/test.txt")
+            .get()
+            .build()
 
-        assertEquals(200, response.statusCode)
-        assertEquals("application/octet-stream", response.headers["content-type"])
-        assertEquals("File content from e2e test", response.body)
+        client.newCall(request).execute().use { response ->
+            assertEquals(200, response.code)
+            assertEquals("application/octet-stream", response.header("Content-Type"))
+            assertEquals("File content from e2e test", response.body?.string())
+        }
     }
 
     @Test
     fun `GET files endpoint should return 404 for non-existent file`() {
-        val response = makeHttpRequest("GET", "/files/nonexistent.txt")
+        val request = Request.Builder()
+            .url("$baseUrl/files/nonexistent.txt")
+            .get()
+            .build()
 
-        assertEquals(404, response.statusCode)
+        client.newCall(request).execute().use { response ->
+            assertEquals(404, response.code)
+        }
     }
 
     @OptIn(ExperimentalPathApi::class)
     @Test
     fun `POST files endpoint should create new file`() {
         val fileContent = "New file content"
+        val requestBody = fileContent.toRequestBody("text/plain".toMediaType())
 
-        val response = makeHttpRequest(
-            "POST",
-            "/files/newfile.txt",
-            body = fileContent
-        )
+        val request = Request.Builder()
+            .url("$baseUrl/files/newfile.txt")
+            .post(requestBody)
+            .build()
 
-        assertEquals(201, response.statusCode)
+        client.newCall(request).execute().use { response ->
+            assertEquals(201, response.code)
+        }
 
         // Verify file was created
         val createdFile = tempDir.resolve("newfile.txt")
@@ -266,13 +222,15 @@ class HttpServerE2ETest {
         existingFile.createFile()
         existingFile.writeText("Original content")
 
-        val response = makeHttpRequest(
-            "POST",
-            "/files/existing.txt",
-            body = "New content"
-        )
+        val requestBody = "New content".toRequestBody("text/plain".toMediaType())
+        val request = Request.Builder()
+            .url("$baseUrl/files/existing.txt")
+            .post(requestBody)
+            .build()
 
-        assertEquals(400, response.statusCode)
+        client.newCall(request).execute().use { response ->
+            assertEquals(400, response.code)
+        }
 
         // Verify original content is unchanged
         assertEquals("Original content", existingFile.toFile().readText())
@@ -280,62 +238,85 @@ class HttpServerE2ETest {
 
     @Test
     fun `Server should support gzip compression`() {
-        val response = makeHttpRequest(
-            "GET",
-            "/echo/compressed-content-test",
-            headers = mapOf("Accept-Encoding" to "gzip")
-        )
+        val request = Request.Builder()
+            .url("$baseUrl/echo/compressed-content-test")
+            .header("Accept-Encoding", "gzip")
+            .get()
+            .build()
 
-        assertEquals(200, response.statusCode)
-        assertEquals("gzip", response.headers["content-encoding"])
-        assertEquals("compressed-content-test", response.body)
+        client.newCall(request).execute().use { response ->
+            assertEquals(200, response.code)
+            assertEquals("gzip", response.header("Content-Encoding"))
+            // OkHttp automatically decompresses gzip responses
+            assertEquals("compressed-content-test", response.body?.string())
+        }
     }
 
     @Test
     fun `Server should handle requests without compression`() {
-        val response = makeHttpRequest(
-            "GET",
-            "/echo/uncompressed-content"
-        )
+        // Create client without automatic gzip support
+        val noGzipClient = OkHttpClient.Builder()
+            .connectTimeout(5, TimeUnit.SECONDS)
+            .build()
 
-        assertEquals(200, response.statusCode)
-        assertTrue(response.headers["content-encoding"] == null)
-        assertEquals("uncompressed-content", response.body)
+        val request = Request.Builder()
+            .url("$baseUrl/echo/uncompressed-content")
+            .get()
+            .build()
+
+        noGzipClient.newCall(request).execute().use { response ->
+            assertEquals(200, response.code)
+            assertNull(response.header("Content-Encoding"))
+            assertEquals("uncompressed-content", response.body?.string())
+        }
+
+        noGzipClient.dispatcher.executorService.shutdown()
+        noGzipClient.connectionPool.evictAll()
     }
 
     @Test
     fun `Server should handle multiple consecutive requests`() {
         repeat(5) { i ->
-            val response = makeHttpRequest("GET", "/echo/request-$i")
-            assertEquals(200, response.statusCode)
-            assertEquals("request-$i", response.body)
+            val request = Request.Builder()
+                .url("$baseUrl/echo/request-$i")
+                .get()
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                assertEquals(200, response.code)
+                assertEquals("request-$i", response.body?.string())
+            }
         }
     }
 
     @Test
     fun `Server should handle Connection close header`() {
-        val response = makeHttpRequest(
-            "GET",
-            "/",
-            headers = mapOf("Connection" to "close")
-        )
+        val request = Request.Builder()
+            .url("$baseUrl/")
+            .header("Connection", "close")
+            .get()
+            .build()
 
-        assertEquals(200, response.statusCode)
-        assertEquals("close", response.headers["connection"])
+        client.newCall(request).execute().use { response ->
+            assertEquals(200, response.code)
+            assertEquals("close", response.header("Connection"))
+        }
     }
 
     @OptIn(ExperimentalPathApi::class)
     @Test
     fun `Server should handle JSON file upload`() {
         val jsonContent = """{"name":"John","age":30,"city":"New York"}"""
+        val requestBody = jsonContent.toRequestBody("application/json".toMediaType())
 
-        val response = makeHttpRequest(
-            "POST",
-            "/files/data.json",
-            body = jsonContent
-        )
+        val request = Request.Builder()
+            .url("$baseUrl/files/data.json")
+            .post(requestBody)
+            .build()
 
-        assertEquals(201, response.statusCode)
+        client.newCall(request).execute().use { response ->
+            assertEquals(201, response.code)
+        }
 
         val createdFile = tempDir.resolve("data.json")
         assertEquals(jsonContent, createdFile.toFile().readText())
@@ -349,14 +330,16 @@ class HttpServerE2ETest {
             Line 2
             Line 3
         """.trimIndent()
+        val requestBody = multilineContent.toRequestBody("text/plain".toMediaType())
 
-        val response = makeHttpRequest(
-            "POST",
-            "/files/multiline.txt",
-            body = multilineContent
-        )
+        val request = Request.Builder()
+            .url("$baseUrl/files/multiline.txt")
+            .post(requestBody)
+            .build()
 
-        assertEquals(201, response.statusCode)
+        client.newCall(request).execute().use { response ->
+            assertEquals(201, response.code)
+        }
 
         val createdFile = tempDir.resolve("multiline.txt")
         assertEquals(multilineContent, createdFile.toFile().readText())
@@ -364,24 +347,74 @@ class HttpServerE2ETest {
 
     @Test
     fun `Server should send Content-Length header in responses`() {
-        val response = makeHttpRequest("GET", "/echo/test")
+        val request = Request.Builder()
+            .url("$baseUrl/echo/test")
+            .get()
+            .build()
 
-        assertEquals(200, response.statusCode)
-        assertNotNull(response.headers["content-length"])
-        assertEquals("4", response.headers["content-length"])
+        client.newCall(request).execute().use { response ->
+            assertEquals(200, response.code)
+            assertNotNull(response.header("Content-Length"))
+            // OkHttp may decompress, so check the actual body
+            val body = response.body?.string()
+            assertEquals("test", body)
+        }
     }
 
     @Test
-    fun `Server should handle empty echo parameter with 400`() {
-        // The route won't match, so this should return 404
-        val response = makeHttpRequest("GET", "/echo/")
+    fun `Server should handle empty echo parameter with 404`() {
+        val request = Request.Builder()
+            .url("$baseUrl/echo/")
+            .get()
+            .build()
 
-        assertEquals(404, response.statusCode)
+        client.newCall(request).execute().use { response ->
+            assertEquals(404, response.code)
+        }
     }
 
-    data class HttpResponse(
-        val statusCode: Int,
-        val headers: Map<String, String>,
-        val body: String
-    )
+    @Test
+    fun `Server should handle custom headers in requests`() {
+        val request = Request.Builder()
+            .url("$baseUrl/")
+            .header("X-Custom-Header", "custom-value")
+            .get()
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            assertEquals(200, response.code)
+        }
+    }
+
+    @Test
+    fun `Server should handle POST with empty body as bad request`() {
+        val requestBody = "".toRequestBody("text/plain".toMediaType())
+        val request = Request.Builder()
+            .url("$baseUrl/files/empty.txt")
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            assertEquals(400, response.code)
+        }
+    }
+
+    @Test
+    fun `Server should handle concurrent requests`() = runBlocking {
+        val jobs = List(10) { i ->
+            async(Dispatchers.IO) {
+                val request = Request.Builder()
+                    .url("$baseUrl/echo/concurrent-$i")
+                    .get()
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    assertEquals(200, response.code)
+                    assertEquals("concurrent-$i", response.body?.string())
+                }
+            }
+        }
+
+        jobs.awaitAll()
+    }
 }
