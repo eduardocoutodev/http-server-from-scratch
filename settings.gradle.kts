@@ -7,4 +7,3 @@ pluginManagement {
 
 rootProject.name = "http-server-from-scratch"
 include("app")
-
