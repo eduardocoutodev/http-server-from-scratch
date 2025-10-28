@@ -96,7 +96,7 @@ fun publishFile(req: HTTPRequest): HTTPResponse {
         )
     }
 
-    if(req.body.isNullOrBlank()){
+    if (req.body.isNullOrBlank()) {
         println("Body is null or blank, bad request !")
         return HTTPResponse(
             status = HTTPStatus.BAD_REQUEST()

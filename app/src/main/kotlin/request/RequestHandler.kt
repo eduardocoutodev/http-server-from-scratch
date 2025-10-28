@@ -69,7 +69,7 @@ fun handleIncomingRequestAndReturnIfSocketShouldBeAlive(clientSocket: Socket): B
             response = HTTPResponse(status = HTTPStatus.NOT_FOUND())
         )
 
-        if(shouldCloseSocket){
+        if (shouldCloseSocket) {
             clientSocket.close()
         }
 
