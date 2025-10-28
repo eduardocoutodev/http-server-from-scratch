@@ -9,7 +9,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class RequestParserTest {
-
     @Test
     fun `parseRequestLine should parse valid GET request`() {
         val requestLine = "GET /index.html HTTP/1.1"
@@ -70,13 +69,14 @@ class RequestParserTest {
 
     @Test
     fun `parseHeaders should parse multiple headers`() {
-        val headerText = """
+        val headerText =
+            """
             Host: example.com
             User-Agent: Mozilla/5.0
             Accept: text/html
             Content-Length: 100
 
-        """.trimIndent()
+            """.trimIndent()
 
         val reader = BufferedReader(StringReader(headerText))
         val headers = parseHeaders(reader)

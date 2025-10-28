@@ -11,12 +11,12 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class BodyCompressionTest {
-
     @Test
     fun `compressBodyIfNeeded should return null for null body`() {
-        val request = HTTPRequest(
-            headers = mapOf("accept-encoding" to "gzip")
-        )
+        val request =
+            HTTPRequest(
+                headers = mapOf("accept-encoding" to "gzip"),
+            )
 
         val result = compressBodyIfNeeded(request, null)
 
@@ -25,9 +25,10 @@ class BodyCompressionTest {
 
     @Test
     fun `compressBodyIfNeeded should return null for empty body`() {
-        val request = HTTPRequest(
-            headers = mapOf("accept-encoding" to "gzip")
-        )
+        val request =
+            HTTPRequest(
+                headers = mapOf("accept-encoding" to "gzip"),
+            )
 
         val result = compressBodyIfNeeded(request, ByteArray(0))
 
@@ -48,9 +49,10 @@ class BodyCompressionTest {
 
     @Test
     fun `compressBodyIfNeeded should compress body when gzip is accepted`() {
-        val request = HTTPRequest(
-            headers = mapOf("accept-encoding" to "gzip")
-        )
+        val request =
+            HTTPRequest(
+                headers = mapOf("accept-encoding" to "gzip"),
+            )
         val originalBody = "Hello, World! This is a test body for compression."
         val body = originalBody.toByteArray()
 
@@ -67,9 +69,10 @@ class BodyCompressionTest {
 
     @Test
     fun `compressBodyIfNeeded should handle multiple encodings and pick gzip`() {
-        val request = HTTPRequest(
-            headers = mapOf("accept-encoding" to "deflate, gzip, br")
-        )
+        val request =
+            HTTPRequest(
+                headers = mapOf("accept-encoding" to "deflate, gzip, br"),
+            )
         val originalBody = "Test body"
         val body = originalBody.toByteArray()
 
@@ -84,9 +87,10 @@ class BodyCompressionTest {
 
     @Test
     fun `compressBodyIfNeeded should handle accept-encoding with spaces`() {
-        val request = HTTPRequest(
-            headers = mapOf("accept-encoding" to "gzip, deflate, br")
-        )
+        val request =
+            HTTPRequest(
+                headers = mapOf("accept-encoding" to "gzip, deflate, br"),
+            )
         val originalBody = "Test body with spaces"
         val body = originalBody.toByteArray()
 
@@ -98,9 +102,10 @@ class BodyCompressionTest {
 
     @Test
     fun `compressBodyIfNeeded should return uncompressed when unsupported encoding`() {
-        val request = HTTPRequest(
-            headers = mapOf("accept-encoding" to "deflate, br")
-        )
+        val request =
+            HTTPRequest(
+                headers = mapOf("accept-encoding" to "deflate, br"),
+            )
         val body = "Test body".toByteArray()
 
         val result = compressBodyIfNeeded(request, body)
@@ -112,9 +117,10 @@ class BodyCompressionTest {
 
     @Test
     fun `compressBodyIfNeeded should handle case-insensitive gzip`() {
-        val request = HTTPRequest(
-            headers = mapOf("accept-encoding" to "GZIP")
-        )
+        val request =
+            HTTPRequest(
+                headers = mapOf("accept-encoding" to "GZIP"),
+            )
         val originalBody = "Test body"
         val body = originalBody.toByteArray()
 

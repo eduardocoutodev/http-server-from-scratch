@@ -1,6 +1,5 @@
 package route
 
-import kotlin.to
 import ServerContext
 import domain.HTTPRequest
 import domain.HTTPResponse
@@ -12,33 +11,34 @@ import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.Path
 import kotlin.io.path.createFile
 import kotlin.io.path.exists
+import kotlin.to
 
 typealias HTTPResponseCallback = (request: HTTPRequest) -> HTTPResponse
 
-val ROUTE_HANDLERS: Map<Route, HTTPResponseCallback> = mapOf(
-    Route(path = "/", method = HttpMethod.GET) to ::rootRouteHandler,
-    Route(path = "/echo/{str}", method = HttpMethod.GET) to ::echoRouteHandler,
-    Route(path = "/user-agent", method = HttpMethod.GET) to ::echoUserAgent,
-    Route(path = "/files/{filename}", method = HttpMethod.GET) to ::retrieveFile,
-    Route(path= "/files/{filename}", method = HttpMethod.POST) to ::publishFile,
-)
+val ROUTE_HANDLERS: Map<Route, HTTPResponseCallback> =
+    mapOf(
+        Route(path = "/", method = HttpMethod.GET) to ::rootRouteHandler,
+        Route(path = "/echo/{str}", method = HttpMethod.GET) to ::echoRouteHandler,
+        Route(path = "/user-agent", method = HttpMethod.GET) to ::echoUserAgent,
+        Route(path = "/files/{filename}", method = HttpMethod.GET) to ::retrieveFile,
+        Route(path = "/files/{filename}", method = HttpMethod.POST) to ::publishFile,
+    )
 
-fun rootRouteHandler(req: HTTPRequest): HTTPResponse =
-    HTTPResponse(status = HTTPStatus.OK())
+fun rootRouteHandler(req: HTTPRequest): HTTPResponse = HTTPResponse(status = HTTPStatus.OK())
 
 fun echoRouteHandler(req: HTTPRequest): HTTPResponse {
     val strArg = req.routeArguments["str"]
 
     if (strArg.isNullOrBlank()) {
         return HTTPResponse(
-            status = HTTPStatus.BAD_REQUEST()
+            status = HTTPStatus.BADREQUEST(),
         )
     }
 
     return HTTPResponse(
         status = HTTPStatus.OK(),
         contentType = "text/plain",
-        body = strArg
+        body = strArg,
     )
 }
 
@@ -47,14 +47,14 @@ fun echoUserAgent(req: HTTPRequest): HTTPResponse {
 
     if (userAgent.isNullOrBlank()) {
         return HTTPResponse(
-            status = HTTPStatus.BAD_REQUEST()
+            status = HTTPStatus.BADREQUEST(),
         )
     }
 
     return HTTPResponse(
         status = HTTPStatus.OK(),
         contentType = "text/plain",
-        body = userAgent
+        body = userAgent,
     )
 }
 
@@ -64,7 +64,7 @@ fun retrieveFile(req: HTTPRequest): HTTPResponse {
 
     if (fileName.isNullOrBlank()) {
         return HTTPResponse(
-            status = HTTPStatus.BAD_REQUEST()
+            status = HTTPStatus.BADREQUEST(),
         )
     }
 
@@ -72,7 +72,7 @@ fun retrieveFile(req: HTTPRequest): HTTPResponse {
     val filenamePath = Path(directory.toString(), fileName)
     if (!filenamePath.exists()) {
         return HTTPResponse(
-            status = HTTPStatus.NOT_FOUND()
+            status = HTTPStatus.NOTFOUND(),
         )
     }
 
@@ -81,7 +81,7 @@ fun retrieveFile(req: HTTPRequest): HTTPResponse {
     return HTTPResponse(
         status = HTTPStatus.OK(),
         contentType = "application/octet-stream",
-        body = fileContent
+        body = fileContent,
     )
 }
 
@@ -92,14 +92,14 @@ fun publishFile(req: HTTPRequest): HTTPResponse {
     if (fileName.isNullOrBlank()) {
         println("Filename is null or blank, bad request !")
         return HTTPResponse(
-            status = HTTPStatus.BAD_REQUEST()
+            status = HTTPStatus.BADREQUEST(),
         )
     }
 
     if (req.body.isNullOrBlank()) {
         println("Body is null or blank, bad request !")
         return HTTPResponse(
-            status = HTTPStatus.BAD_REQUEST()
+            status = HTTPStatus.BADREQUEST(),
         )
     }
 
@@ -108,7 +108,7 @@ fun publishFile(req: HTTPRequest): HTTPResponse {
     if (filenamePath.exists()) {
         println("File already exists ! Bad Request")
         return HTTPResponse(
-            status = HTTPStatus.BAD_REQUEST()
+            status = HTTPStatus.BADREQUEST(),
         )
     }
 

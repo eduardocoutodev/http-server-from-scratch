@@ -11,5 +11,4 @@ object ServerContext {
             filesDirectory = directoryToOverride.toAbsolutePath()
         }
     }
-
 }

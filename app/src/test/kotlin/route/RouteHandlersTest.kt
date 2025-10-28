@@ -16,11 +16,9 @@ import kotlin.io.path.createFile
 import kotlin.io.path.exists
 import kotlin.io.path.writeText
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class RouteHandlersTest {
-
     @TempDir
     lateinit var tempDir: Path
 
@@ -49,9 +47,10 @@ class RouteHandlersTest {
 
     @Test
     fun `echoRouteHandler should echo back the string parameter`() {
-        val request = HTTPRequest(
-            routeArguments = mapOf("str" to "hello")
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf("str" to "hello"),
+            )
 
         val response = echoRouteHandler(request)
 
@@ -62,31 +61,34 @@ class RouteHandlersTest {
 
     @Test
     fun `echoRouteHandler should return 400 for null parameter`() {
-        val request = HTTPRequest(
-            routeArguments = mapOf()
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf(),
+            )
 
         val response = echoRouteHandler(request)
 
-        assertEquals(HTTPStatus.BAD_REQUEST().code, response.status.code)
+        assertEquals(HTTPStatus.BADREQUEST().code, response.status.code)
     }
 
     @Test
     fun `echoRouteHandler should return 400 for blank parameter`() {
-        val request = HTTPRequest(
-            routeArguments = mapOf("str" to "   ")
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf("str" to "   "),
+            )
 
         val response = echoRouteHandler(request)
 
-        assertEquals(HTTPStatus.BAD_REQUEST().code, response.status.code)
+        assertEquals(HTTPStatus.BADREQUEST().code, response.status.code)
     }
 
     @Test
     fun `echoRouteHandler should handle special characters`() {
-        val request = HTTPRequest(
-            routeArguments = mapOf("str" to "hello-world_123")
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf("str" to "hello-world_123"),
+            )
 
         val response = echoRouteHandler(request)
 
@@ -96,9 +98,10 @@ class RouteHandlersTest {
 
     @Test
     fun `echoUserAgent should return user agent header`() {
-        val request = HTTPRequest(
-            headers = mapOf("user-agent" to "Mozilla/5.0")
-        )
+        val request =
+            HTTPRequest(
+                headers = mapOf("user-agent" to "Mozilla/5.0"),
+            )
 
         val response = echoUserAgent(request)
 
@@ -109,24 +112,26 @@ class RouteHandlersTest {
 
     @Test
     fun `echoUserAgent should return 400 when user-agent is missing`() {
-        val request = HTTPRequest(
-            headers = mapOf()
-        )
+        val request =
+            HTTPRequest(
+                headers = mapOf(),
+            )
 
         val response = echoUserAgent(request)
 
-        assertEquals(HTTPStatus.BAD_REQUEST().code, response.status.code)
+        assertEquals(HTTPStatus.BADREQUEST().code, response.status.code)
     }
 
     @Test
     fun `echoUserAgent should return 400 when user-agent is blank`() {
-        val request = HTTPRequest(
-            headers = mapOf("user-agent" to "   ")
-        )
+        val request =
+            HTTPRequest(
+                headers = mapOf("user-agent" to "   "),
+            )
 
         val response = echoUserAgent(request)
 
-        assertEquals(HTTPStatus.BAD_REQUEST().code, response.status.code)
+        assertEquals(HTTPStatus.BADREQUEST().code, response.status.code)
     }
 
     @OptIn(ExperimentalPathApi::class)
@@ -136,9 +141,10 @@ class RouteHandlersTest {
         val testFile = tempDir.resolve("test.txt")
         testFile.writeText("Hello from file!")
 
-        val request = HTTPRequest(
-            routeArguments = mapOf("filename" to "test.txt")
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf("filename" to "test.txt"),
+            )
 
         val response = retrieveFile(request)
 
@@ -149,35 +155,38 @@ class RouteHandlersTest {
 
     @Test
     fun `retrieveFile should return 404 when file does not exist`() {
-        val request = HTTPRequest(
-            routeArguments = mapOf("filename" to "nonexistent.txt")
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf("filename" to "nonexistent.txt"),
+            )
 
         val response = retrieveFile(request)
 
-        assertEquals(HTTPStatus.NOT_FOUND().code, response.status.code)
+        assertEquals(HTTPStatus.NOTFOUND().code, response.status.code)
     }
 
     @Test
     fun `retrieveFile should return 400 when filename is null`() {
-        val request = HTTPRequest(
-            routeArguments = mapOf()
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf(),
+            )
 
         val response = retrieveFile(request)
 
-        assertEquals(HTTPStatus.BAD_REQUEST().code, response.status.code)
+        assertEquals(HTTPStatus.BADREQUEST().code, response.status.code)
     }
 
     @Test
     fun `retrieveFile should return 400 when filename is blank`() {
-        val request = HTTPRequest(
-            routeArguments = mapOf("filename" to "   ")
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf("filename" to "   "),
+            )
 
         val response = retrieveFile(request)
 
-        assertEquals(HTTPStatus.BAD_REQUEST().code, response.status.code)
+        assertEquals(HTTPStatus.BADREQUEST().code, response.status.code)
     }
 
     @OptIn(ExperimentalPathApi::class)
@@ -186,9 +195,10 @@ class RouteHandlersTest {
         val testFile = tempDir.resolve("data.json")
         testFile.writeText("""{"key":"value"}""")
 
-        val request = HTTPRequest(
-            routeArguments = mapOf("filename" to "data.json")
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf("filename" to "data.json"),
+            )
 
         val response = retrieveFile(request)
 
@@ -199,10 +209,11 @@ class RouteHandlersTest {
     @OptIn(ExperimentalPathApi::class)
     @Test
     fun `publishFile should create file with content`() {
-        val request = HTTPRequest(
-            routeArguments = mapOf("filename" to "newfile.txt"),
-            body = "File content here"
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf("filename" to "newfile.txt"),
+                body = "File content here",
+            )
 
         val response = publishFile(request)
 
@@ -216,50 +227,54 @@ class RouteHandlersTest {
 
     @Test
     fun `publishFile should return 400 when filename is null`() {
-        val request = HTTPRequest(
-            routeArguments = mapOf(),
-            body = "content"
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf(),
+                body = "content",
+            )
 
         val response = publishFile(request)
 
-        assertEquals(HTTPStatus.BAD_REQUEST().code, response.status.code)
+        assertEquals(HTTPStatus.BADREQUEST().code, response.status.code)
     }
 
     @Test
     fun `publishFile should return 400 when filename is blank`() {
-        val request = HTTPRequest(
-            routeArguments = mapOf("filename" to "   "),
-            body = "content"
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf("filename" to "   "),
+                body = "content",
+            )
 
         val response = publishFile(request)
 
-        assertEquals(HTTPStatus.BAD_REQUEST().code, response.status.code)
+        assertEquals(HTTPStatus.BADREQUEST().code, response.status.code)
     }
 
     @Test
     fun `publishFile should return 400 when body is null`() {
-        val request = HTTPRequest(
-            routeArguments = mapOf("filename" to "test.txt"),
-            body = null
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf("filename" to "test.txt"),
+                body = null,
+            )
 
         val response = publishFile(request)
 
-        assertEquals(HTTPStatus.BAD_REQUEST().code, response.status.code)
+        assertEquals(HTTPStatus.BADREQUEST().code, response.status.code)
     }
 
     @Test
     fun `publishFile should return 400 when body is blank`() {
-        val request = HTTPRequest(
-            routeArguments = mapOf("filename" to "test.txt"),
-            body = "   "
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf("filename" to "test.txt"),
+                body = "   ",
+            )
 
         val response = publishFile(request)
 
-        assertEquals(HTTPStatus.BAD_REQUEST().code, response.status.code)
+        assertEquals(HTTPStatus.BADREQUEST().code, response.status.code)
     }
 
     @OptIn(ExperimentalPathApi::class)
@@ -269,29 +284,32 @@ class RouteHandlersTest {
         val existingFile = tempDir.resolve("existing.txt")
         existingFile.createFile()
 
-        val request = HTTPRequest(
-            routeArguments = mapOf("filename" to "existing.txt"),
-            body = "new content"
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf("filename" to "existing.txt"),
+                body = "new content",
+            )
 
         val response = publishFile(request)
 
-        assertEquals(HTTPStatus.BAD_REQUEST().code, response.status.code)
+        assertEquals(HTTPStatus.BADREQUEST().code, response.status.code)
     }
 
     @OptIn(ExperimentalPathApi::class)
     @Test
     fun `publishFile should handle multiline content`() {
-        val content = """
+        val content =
+            """
             Line 1
             Line 2
             Line 3
-        """.trimIndent()
+            """.trimIndent()
 
-        val request = HTTPRequest(
-            routeArguments = mapOf("filename" to "multiline.txt"),
-            body = content
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf("filename" to "multiline.txt"),
+                body = content,
+            )
 
         val response = publishFile(request)
 
@@ -306,10 +324,11 @@ class RouteHandlersTest {
     fun `publishFile should handle JSON content`() {
         val jsonContent = """{"name":"John","age":30}"""
 
-        val request = HTTPRequest(
-            routeArguments = mapOf("filename" to "data.json"),
-            body = jsonContent
-        )
+        val request =
+            HTTPRequest(
+                routeArguments = mapOf("filename" to "data.json"),
+                body = jsonContent,
+            )
 
         val response = publishFile(request)
 

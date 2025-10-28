@@ -1,13 +1,13 @@
 import ServerContext.registerServerContext
-import request.handleNewSocketConnection
-import java.net.ServerSocket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import request.handleNewSocketConnection
+import java.net.ServerSocket
 
 suspend fun main(args: Array<String>) {
     println("Starting HTTP server")
@@ -19,14 +19,16 @@ suspend fun main(args: Array<String>) {
 
     val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    Runtime.getRuntime().addShutdownHook(Thread {
-        println("Shutting down server")
-        serverSocket.close()
-        runBlocking {
-            scope.cancel()
-            scope.coroutineContext[Job]?.join()
-        }
-    })
+    Runtime.getRuntime().addShutdownHook(
+        Thread {
+            println("Shutting down server")
+            serverSocket.close()
+            runBlocking {
+                scope.cancel()
+                scope.coroutineContext[Job]?.join()
+            }
+        },
+    )
 
     try {
         while (!serverSocket.isClosed) {
@@ -48,4 +50,3 @@ suspend fun main(args: Array<String>) {
         scope.cancel()
     }
 }
-

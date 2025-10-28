@@ -10,7 +10,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class RouteParserTest {
-
     @Test
     fun `matchRoute should match exact paths`() {
         val route = Route(HttpMethod.GET, "/users")

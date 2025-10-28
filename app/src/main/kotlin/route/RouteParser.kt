@@ -24,7 +24,10 @@ fun findIncomingRoute(incomingRoute: Route): Route? {
         .find { route -> matchRoute(incomingRoute, route) }
 }
 
-fun matchRoute(incomingRoute: Route, route: Route): Boolean {
+fun matchRoute(
+    incomingRoute: Route,
+    route: Route,
+): Boolean {
     val incomingTarget = incomingRoute.path
     if (incomingRoute.method != route.method) {
         return false
@@ -33,11 +36,13 @@ fun matchRoute(incomingRoute: Route, route: Route): Boolean {
     // Remove query params to not affect
     val cleanTarget = incomingTarget.substringBefore('?')
 
-    val targetParts = cleanTarget.split('/')
-        .filter { it.isNotBlank() }
+    val targetParts =
+        cleanTarget.split('/')
+            .filter { it.isNotBlank() }
 
-    val routeParts = route.path.split('/')
-        .filter { it.isNotBlank() }
+    val routeParts =
+        route.path.split('/')
+            .filter { it.isNotBlank() }
 
     if (targetParts.size != routeParts.size) {
         return false
@@ -50,18 +55,23 @@ fun matchRoute(incomingRoute: Route, route: Route): Boolean {
 
 // route: /echo/{arg1}/{arg2}
 // incomingTarget: /echo/abc/xyz -> extract arg1 = abc and arg2 = xyz and returns as args
-fun extractRouteArgs(incomingRoute: Route, route: Route?): Map<String, String> {
+fun extractRouteArgs(
+    incomingRoute: Route,
+    route: Route?,
+): Map<String, String> {
     if (route == null) {
         return mapOf()
     }
 
-    val incomingTargetParts = incomingRoute.path.split("/")
-        .map { it.trim() }
-        .filter { it.isNotBlank() }
+    val incomingTargetParts =
+        incomingRoute.path.split("/")
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
 
-    val routeParts = route.path.split("/")
-        .map { it.trim() }
-        .filter { it.isNotBlank() }
+    val routeParts =
+        route.path.split("/")
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
 
     if (incomingTargetParts.size != routeParts.size) {
         return mapOf()

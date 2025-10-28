@@ -20,35 +20,39 @@ import kotlin.text.trim
 
 fun parseHTTPRequestInvocation(requestBufferedReader: BufferedReader): HTTPRequest {
     try {
-        val requestLine = requestBufferedReader.readLine()
-            ?: throw HTTPParseException("Empty request")
+        val requestLine =
+            requestBufferedReader.readLine()
+                ?: throw HTTPParseException("Empty request")
 
         val (method, target) = parseRequestLine(requestLine)
-        val incomingRoute = Route(
-            method = method,
-            path = target
-        )
+        val incomingRoute =
+            Route(
+                method = method,
+                path = target,
+            )
         val matchedRoute = findIncomingRoute(incomingRoute)
 
         val headers = parseHeaders(requestBufferedReader)
-        val routeArgs = extractRouteArgs(
-            incomingRoute = incomingRoute,
-            route = matchedRoute
-        )
+        val routeArgs =
+            extractRouteArgs(
+                incomingRoute = incomingRoute,
+                route = matchedRoute,
+            )
 
         // Should parse body in case it exists
-        val requestBody = headers["content-length"]?.let { bodyLength ->
-            parseRequestBody(
-                reader = requestBufferedReader,
-                bodyLength = bodyLength.toInt()
-            )
-        }
+        val requestBody =
+            headers["content-length"]?.let { bodyLength ->
+                parseRequestBody(
+                    reader = requestBufferedReader,
+                    bodyLength = bodyLength.toInt(),
+                )
+            }
 
         return HTTPRequest(
             route = matchedRoute,
             headers = headers,
             routeArguments = routeArgs,
-            body = requestBody
+            body = requestBody,
         )
     } catch (e: IOException) {
         throw HTTPParseException("Failed to read request", e)
@@ -58,7 +62,7 @@ fun parseHTTPRequestInvocation(requestBufferedReader: BufferedReader): HTTPReque
 data class RequestLine(
     val method: HttpMethod,
     val target: String,
-    val httpVersion: String
+    val httpVersion: String,
 )
 
 fun parseRequestLine(requestLine: String): RequestLine {
@@ -100,14 +104,16 @@ fun parseHeaders(reader: BufferedReader): Map<String, String> {
             throw HTTPParseException("Empty header name: $line")
         }
 
-
         headers[headerName] = headerValue
     }
 
     return headers
 }
 
-fun parseRequestBody(reader: BufferedReader, bodyLength: Int): String {
+fun parseRequestBody(
+    reader: BufferedReader,
+    bodyLength: Int,
+): String {
     val bodyBuilder = StringBuilder()
     for (i in 0 until bodyLength) {
         val char = reader.read().toChar()
