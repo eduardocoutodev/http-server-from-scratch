@@ -1,6 +1,5 @@
 package route
 
-import kotlin.to
 import ServerContext
 import domain.HTTPRequest
 import domain.HTTPResponse
@@ -12,6 +11,7 @@ import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.Path
 import kotlin.io.path.createFile
 import kotlin.io.path.exists
+import kotlin.to
 
 typealias HTTPResponseCallback = (request: HTTPRequest) -> HTTPResponse
 
@@ -20,7 +20,7 @@ val ROUTE_HANDLERS: Map<Route, HTTPResponseCallback> = mapOf(
     Route(path = "/echo/{str}", method = HttpMethod.GET) to ::echoRouteHandler,
     Route(path = "/user-agent", method = HttpMethod.GET) to ::echoUserAgent,
     Route(path = "/files/{filename}", method = HttpMethod.GET) to ::retrieveFile,
-    Route(path= "/files/{filename}", method = HttpMethod.POST) to ::publishFile,
+    Route(path = "/files/{filename}", method = HttpMethod.POST) to ::publishFile,
 )
 
 fun rootRouteHandler(req: HTTPRequest): HTTPResponse =
