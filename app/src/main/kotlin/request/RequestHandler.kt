@@ -36,9 +36,10 @@ suspend fun handleNewSocketConnection(clientSocket: Socket) {
                 respondHttpRequest(
                     clientSocket = socket,
                     request = HTTPRequest(),
-                    response = HTTPResponse(
-                        status = HTTPStatus.BAD_REQUEST(),
-                    )
+                    response =
+                        HTTPResponse(
+                            status = HTTPStatus.BADREQUEST(),
+                        ),
                 )
             } catch (ignored: IOException) {
                 // Client already disconnected
@@ -52,8 +53,9 @@ suspend fun handleNewSocketConnection(clientSocket: Socket) {
 fun handleIncomingRequestAndReturnIfSocketShouldBeAlive(clientSocket: Socket): Boolean {
     val readerStream = clientSocket.inputStream
 
-    val rawRequest = readerStream
-        .bufferedReader()
+    val rawRequest =
+        readerStream
+            .bufferedReader()
 
     val requestParsed: HTTPRequest = parseHTTPRequestInvocation(rawRequest)
     val httpResponseCallBack = ROUTE_HANDLERS[requestParsed.route]
@@ -66,10 +68,10 @@ fun handleIncomingRequestAndReturnIfSocketShouldBeAlive(clientSocket: Socket): B
         respondHttpRequest(
             clientSocket = clientSocket,
             request = requestParsed,
-            response = HTTPResponse(status = HTTPStatus.NOT_FOUND())
+            response = HTTPResponse(status = HTTPStatus.NOTFOUND()),
         )
 
-        if(shouldCloseSocket){
+        if (shouldCloseSocket) {
             clientSocket.close()
         }
 
@@ -81,7 +83,7 @@ fun handleIncomingRequestAndReturnIfSocketShouldBeAlive(clientSocket: Socket): B
     respondHttpRequest(
         clientSocket = clientSocket,
         request = requestParsed,
-        response = httpResponse
+        response = httpResponse,
     )
 
     println("Responded to client")

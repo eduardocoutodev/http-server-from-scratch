@@ -2,14 +2,12 @@ package response
 
 import CRLF
 import HTTP_VERSION
-import domain.HTTPResponse
 import domain.HTTPRequest
+import domain.HTTPResponse
 import request.shouldCloseSocketConnection
 import java.io.IOException
-import java.net.SocketException
-
 import java.net.Socket
-
+import java.net.SocketException
 import java.nio.charset.StandardCharsets
 import kotlin.collections.forEach
 import kotlin.let
@@ -57,21 +55,23 @@ fun respondHttpRequest(
 
 private fun prepareResponse(
     request: HTTPRequest,
-    response: HTTPResponse
+    response: HTTPResponse,
 ): Pair<ByteArray?, Map<String, String>> {
     val originalBody = response.body?.toByteArray(StandardCharsets.UTF_8)
 
-    val compressionResult = compressBodyIfNeeded(
-        request = request,
-        body = originalBody
-    )
+    val compressionResult =
+        compressBodyIfNeeded(
+            request = request,
+            body = originalBody,
+        )
 
-    val headers = buildResponseHeaders(
-        request = request,
-        response = response,
-        bodyLength = compressionResult?.body?.size ?: 0,
-        additionalHeaders = compressionResult?.headers
-    )
+    val headers =
+        buildResponseHeaders(
+            request = request,
+            response = response,
+            bodyLength = compressionResult?.body?.size ?: 0,
+            additionalHeaders = compressionResult?.headers,
+        )
 
     return compressionResult?.body to headers
 }
@@ -81,7 +81,7 @@ fun buildResponseHeaders(
     request: HTTPRequest,
     response: HTTPResponse,
     bodyLength: Int,
-    additionalHeaders: Map<String, String>?
+    additionalHeaders: Map<String, String>?,
 ): Map<String, String> {
     return buildMap {
         response.contentType?.let {
