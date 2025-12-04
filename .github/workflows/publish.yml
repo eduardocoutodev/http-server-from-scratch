@@ -28,6 +28,9 @@ jobs:
         with:
           gradle-version: 9.1.0
 
+      - name: Run tests
+        run: gradle :app:test --no-daemon
+
       - name: Build Project
         run: gradle :app:build --no-daemon
 
